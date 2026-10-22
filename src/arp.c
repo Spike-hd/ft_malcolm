@@ -52,6 +52,7 @@ int arp_reply(int fd, char **av, int ifindex) {
         i++;
     }
     /* 42 bytes of headers plus padding; the interface supplies the Ethernet FCS. */
+    printf("Now sending an ARP reply to the target address with spoofed source, please wait...\n");
     sent = sendto(fd, frame, sizeof(frame), 0, (const struct sockaddr *)&destination, sizeof(destination));
     if (sent < 0) {
         fprintf(stderr, "Error: sendto: %s\n", strerror(errno));
@@ -59,5 +60,6 @@ int arp_reply(int fd, char **av, int ifindex) {
     }
     if ((size_t)sent != sizeof(frame))
         return error_msg("Error: incomplete ARP reply transmission.\n");
+    printf("Sent an ARP reply packet, you may now check the arp table on the target.\n");
     return FALSE;
 }

@@ -13,6 +13,8 @@
 #include <sys/time.h>
 #include <errno.h>
 #include <string.h>
+#include <ifaddrs.h>
+#include <net/if.h>
 
 int	error_msg(char *str);
 void print_usage(void);

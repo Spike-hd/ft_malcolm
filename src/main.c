@@ -25,6 +25,39 @@ int create_socket(void) {
 }
 
 
+static void print_interface(int ifindex) {
+    struct ifaddrs *interfaces;
+    struct ifaddrs *current;
+
+    if (getifaddrs(&interfaces) == 0) {
+        current = interfaces;
+        while (current) {
+            if (current->ifa_name
+                && if_nametoindex(current->ifa_name) == (unsigned int)ifindex) {
+                printf("Found available interface: %s\n", current->ifa_name);
+                freeifaddrs(interfaces);
+                return;
+            }
+            current = current->ifa_next;
+        }
+        freeifaddrs(interfaces);
+    }
+    printf("Found available interface: index %d (name unavailable)\n", ifindex);
+}
+
+static void print_request(const unsigned char *buf, int ifindex) {
+    char ip[INET_ADDRSTRLEN];
+
+    print_interface(ifindex);
+    printf("An ARP request has been broadcast.\n");
+    printf("mac address of request: %02x:%02x:%02x:%02x:%02x:%02x\n",
+        (unsigned int)buf[22], (unsigned int)buf[23],
+        (unsigned int)buf[24], (unsigned int)buf[25],
+        (unsigned int)buf[26], (unsigned int)buf[27]);
+    if (inet_ntop(AF_INET, buf + 28, ip, sizeof(ip)))
+        printf("IP address of request: %s\n", ip);
+}
+
 int arp_loop(int fd, char **av) {
     char *ip_from = av[3];
     char *mac_from = av[4];
@@ -53,8 +86,9 @@ int arp_loop(int fd, char **av) {
             ||is_correct_mac(mac_from, buf) == FALSE)
             continue;
 
-        if (buf[20] != 0x00 || buf[21] != 0x01)
-            continue;
+        if (g_stop)
+            break;
+        print_request(buf, sll.sll_ifindex);
         if (g_stop)
             break;
         return arp_reply(fd, av, sll.sll_ifindex);
@@ -67,7 +101,7 @@ int main(int ac, char** av) {
 
     /* Verification du parsing */
     if (error_parse_args(ac, av)) {
-        return TRUE; // ?
+        return 0;
     }
 
     /* Mise en place du Ctrl C */
@@ -88,5 +122,6 @@ int main(int ac, char** av) {
     int status = arp_loop(fd, av);
 
     close(fd);
+    printf("Exiting program...\n");
     return status;
 }
